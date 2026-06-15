@@ -11,7 +11,7 @@ const complianceSchema = new mongoose.Schema({
   submissionAuthority: { type: String },
   dueDate: { type: String },
   alertDate: { type: String },
-  status: { type: String, enum: ['Pending', 'InProgress', 'Completed'], default: 'Pending' },
+  status: { type: String, enum: ['Pending', 'Completed'], default: 'Pending' },
   completedDate: { type: Date, default: null }
 }, { timestamps: true });
 
