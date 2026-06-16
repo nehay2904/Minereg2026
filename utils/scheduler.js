@@ -1,9 +1,19 @@
 const cron = require('node-cron');
+const nodemailer = require('nodemailer');
 const Compliance = require('../models/Compliance');
 const AlertLog = require('../models/AlertLog');
-const User = require('../models/User')
-const { Resend } = require('resend');
-const resend = new Resend(process.env.RESEND_API_KEY);
+const User = require('../models/User');
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    type: 'OAuth2',
+    user: process.env.EMAIL_USER,
+    clientId: process.env.GMAIL_CLIENT_ID,
+    clientSecret: process.env.GMAIL_CLIENT_SECRET,
+    refreshToken: process.env.GMAIL_REFRESH_TOKEN
+  }
+});
 
 const getEmailHTML = (compliance, type, assignedName) => {
   const color = type === 'overdue' ? '#E24B4A' : type === 'due' ? '#EF9F27' : '#1a73e8';
@@ -47,13 +57,13 @@ const getEmailHTML = (compliance, type, assignedName) => {
           </tr>
         </table>
         <div style="margin-top: 24px; padding: 16px; background: #f8f9fa; border-radius: 4px; text-align: center;">
-        <p style="margin: 0; font-size: 13px; color: #666;">Please log in to CompliTrack to update the status of this compliance.</p>
-<div style="text-align: center; margin-top: 16px;">
-  <a href="${process.env.APP_URL}"
-     style="display: inline-block; padding: 12px 32px; background: #1a73e8; color: white; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: bold;">
-    Open CompliTrack →
-  </a>
-</div>
+          <p style="margin: 0; font-size: 13px; color: #666;">Please log in to CompliTrack to update the status of this compliance.</p>
+          <div style="text-align: center; margin-top: 16px;">
+            <a href="${process.env.APP_URL}"
+               style="display: inline-block; padding: 12px 32px; background: #1a73e8; color: white; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: bold;">
+              Open CompliTrack →
+            </a>
+          </div>
         </div>
       </div>
       <div style="background: #f1f3f4; padding: 12px; text-align: center;">
@@ -119,12 +129,12 @@ const runAlertJob = async () => {
         `🔔 REMINDER: ${compliance.complianceId} — ${compliance.title}`;
 
       try {
-       await resend.emails.send({
-  from: 'CompliTrack <onboarding@resend.dev>',
-  to: assignedEmail,
-  subject,
-  html: getEmailHTML(compliance, type, assignedName)
-});
+        await transporter.sendMail({
+          from: `"CompliTrack JPL Mines" <${process.env.EMAIL_USER}>`,
+          to: assignedEmail,
+          subject,
+          html: getEmailHTML(compliance, type, assignedName)
+        });
         console.log(`Email sent to ${assignedEmail}: ${subject}`);
         await AlertLog.create({
           complianceId: compliance.complianceId,
@@ -144,10 +154,9 @@ const runAlertJob = async () => {
   }
 };
 
-// Runs every day at 10:00 AM IST
-cron.schedule('45 16 * * *', runAlertJob, {
+// Runs every day at 4:45 PM IST
+cron.schedule('25 17 * * *', runAlertJob, {
   timezone: 'Asia/Kolkata'
 });
 
 module.exports = { runAlertJob };
-
