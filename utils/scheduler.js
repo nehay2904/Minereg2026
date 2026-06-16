@@ -5,13 +5,12 @@ const AlertLog = require('../models/AlertLog');
 const User = require('../models/User');
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
+  service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
-  }
+  },
+  family: 4
 });
 
 const getEmailHTML = (compliance, type, assignedName) => {
@@ -154,7 +153,7 @@ const runAlertJob = async () => {
 };
 
 // Runs every day at 10:00 AM IST
-cron.schedule('30 10 * * *', runAlertJob, {
+cron.schedule('36 10 * * *', runAlertJob, {
   timezone: 'Asia/Kolkata'
 });
 
