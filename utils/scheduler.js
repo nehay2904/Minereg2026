@@ -153,7 +153,7 @@ const runAlertJob = async () => {
 };
 
 // Runs every day at 10:00 AM IST
-cron.schedule('59 10 * * *', runAlertJob, {
+cron.schedule('03 11 * * *', runAlertJob, {
   timezone: 'Asia/Kolkata'
 });
 
