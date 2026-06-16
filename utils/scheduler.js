@@ -10,9 +10,11 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
   },
-  family: 4
+  family: 4,
+  tls: {
+    rejectUnauthorized: false
+  }
 });
-
 const getEmailHTML = (compliance, type, assignedName) => {
   const color = type === 'overdue' ? '#E24B4A' : type === 'due' ? '#EF9F27' : '#1a73e8';
   const label = type === 'overdue' ? '🔴 OVERDUE' : type === 'due' ? '📅 DUE TODAY' : '🔔 REMINDER';
@@ -153,7 +155,7 @@ const runAlertJob = async () => {
 };
 
 // Runs every day at 10:00 AM IST
-cron.schedule('10 11 * * *', runAlertJob, {
+cron.schedule('13 11 * * *', runAlertJob, {
   timezone: 'Asia/Kolkata'
 });
 
