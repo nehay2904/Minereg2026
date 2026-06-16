@@ -6,14 +6,13 @@ const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
-  port: 587,
+  port: parseInt(process.env.EMAIL_PORT) || 587,
   secure: false,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
   }
 });
-
 
 const getEmailHTML = (compliance, type, assignedName) => {
   const color = type === 'overdue' ? '#E24B4A' : type === 'due' ? '#EF9F27' : '#1a73e8';
@@ -155,7 +154,7 @@ const runAlertJob = async () => {
 };
 
 // Runs every day at 10:00 AM IST
-cron.schedule('05 16 * * *', runAlertJob, {
+cron.schedule('10 16 * * *', runAlertJob, {
   timezone: 'Asia/Kolkata'
 });
 
