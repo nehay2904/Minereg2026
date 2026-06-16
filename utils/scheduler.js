@@ -4,17 +4,10 @@ const Compliance = require('../models/Compliance');
 const AlertLog = require('../models/AlertLog');
 const User = require('../models/User');
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  },
-  family: 4,
-  tls: {
-    rejectUnauthorized: false
-  }
-});
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+
 const getEmailHTML = (compliance, type, assignedName) => {
   const color = type === 'overdue' ? '#E24B4A' : type === 'due' ? '#EF9F27' : '#1a73e8';
   const label = type === 'overdue' ? '🔴 OVERDUE' : type === 'due' ? '📅 DUE TODAY' : '🔔 REMINDER';
@@ -129,12 +122,12 @@ const runAlertJob = async () => {
         `🔔 REMINDER: ${compliance.complianceId} — ${compliance.title}`;
 
       try {
-        await transporter.sendMail({
-          from: `"CompliTrack JPL Mines" <${process.env.EMAIL_USER}>`,
-          to: assignedEmail,
-          subject,
-          html: getEmailHTML(compliance, type, assignedName)
-        });
+        await resend.emails.send({
+  from: 'CompliTrack <onboarding@resend.dev>',
+  to: assignedEmail,
+  subject,
+  html: getEmailHTML(compliance, type, assignedName)
+});
         console.log(`Email sent to ${assignedEmail}: ${subject}`);
         await AlertLog.create({
           complianceId: compliance.complianceId,
@@ -155,7 +148,7 @@ const runAlertJob = async () => {
 };
 
 // Runs every day at 10:00 AM IST
-cron.schedule('13 11 * * *', runAlertJob, {
+cron.schedule('25 11 * * *', runAlertJob, {
   timezone: 'Asia/Kolkata'
 });
 
