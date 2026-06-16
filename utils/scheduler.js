@@ -1,5 +1,4 @@
 const cron = require('node-cron');
-const nodemailer = require('nodemailer');
 const Compliance = require('../models/Compliance');
 const AlertLog = require('../models/AlertLog');
 const User = require('../models/User');
@@ -156,7 +155,7 @@ const runAlertJob = async () => {
 };
 
 // Runs every day at 10:00 AM IST
-cron.schedule('00 16 * * *', runAlertJob, {
+cron.schedule('05 16 * * *', runAlertJob, {
   timezone: 'Asia/Kolkata'
 });
 
