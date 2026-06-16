@@ -55,7 +55,13 @@ const getEmailHTML = (compliance, type, assignedName) => {
           </tr>
         </table>
         <div style="margin-top: 24px; padding: 16px; background: #f8f9fa; border-radius: 4px; text-align: center;">
-          <p style="margin: 0; font-size: 13px; color: #666;">Please log in to CompliTrack to update the status of this compliance.</p>
+        <p style="margin: 0; font-size: 13px; color: #666;">Please log in to CompliTrack to update the status of this compliance.</p>
+<div style="text-align: center; margin-top: 16px;">
+  <a href="${process.env.APP_URL}/login"
+     style="display: inline-block; padding: 12px 32px; background: #1a73e8; color: white; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: bold;">
+    Open CompliTrack →
+  </a>
+</div>
         </div>
       </div>
       <div style="background: #f1f3f4; padding: 12px; text-align: center;">
@@ -147,7 +153,7 @@ const runAlertJob = async () => {
 };
 
 // Runs every day at 10:00 AM IST
-cron.schedule('38 12 * * *', runAlertJob, {
+cron.schedule('01 10 * * *', runAlertJob, {
   timezone: 'Asia/Kolkata'
 });
 
