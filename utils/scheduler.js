@@ -126,7 +126,7 @@ const runAlertJob = async () => {
       const subject =
         type === 'overdue' ? `🔴 OVERDUE: ${compliance.complianceId} — ${compliance.title}` :
         type === 'due' ? `📅 DUE TODAY: ${compliance.complianceId} — ${compliance.title}` :
-        `🔔 REMINDER: ${compliance.complianceId} — ${compliance.title}`;
+        `🔔 REMINDER:  ${compliance.title}`;
 
       try {
         await transporter.sendMail({
