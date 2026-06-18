@@ -1,23 +1,29 @@
-const cron = require('node-cron');
-const nodemailer = require('nodemailer');
-const Compliance = require('../models/Compliance');
-const AlertLog = require('../models/AlertLog');
-const User = require('../models/User');
+const cron = require("node-cron");
+const nodemailer = require("nodemailer");
+const Compliance = require("../models/Compliance");
+const AlertLog = require("../models/AlertLog");
+const User = require("../models/User");
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  service: "gmail",
   auth: {
-    type: 'OAuth2',
+    type: "OAuth2",
     user: process.env.EMAIL_USER,
     clientId: process.env.GMAIL_CLIENT_ID,
     clientSecret: process.env.GMAIL_CLIENT_SECRET,
-    refreshToken: process.env.GMAIL_REFRESH_TOKEN
-  }
+    refreshToken: process.env.GMAIL_REFRESH_TOKEN,
+  },
 });
 
 const getEmailHTML = (compliance, type, assignedName) => {
-  const color = type === 'overdue' ? '#E24B4A' : type === 'due' ? '#EF9F27' : '#1a73e8';
-  const label = type === 'overdue' ? '🔴 OVERDUE' : type === 'due' ? '📅 DUE TODAY' : '🔔 REMINDER';
+  const color =
+    type === "overdue" ? "#E24B4A" : type === "due" ? "#EF9F27" : "#1a73e8";
+  const label =
+    type === "overdue"
+      ? "🔴 OVERDUE"
+      : type === "due"
+        ? "📅 DUE TODAY"
+        : "🔔 REMINDER";
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
       <div style="background: #1a73e8; padding: 24px; text-align: center;">
@@ -41,7 +47,7 @@ const getEmailHTML = (compliance, type, assignedName) => {
           </tr>
           <tr style="background: #f8f9fa;">
             <td style="padding: 10px; color: #666; border: 1px solid #e0e0e0;">Act</td>
-            <td style="padding: 10px; border: 1px solid #e0e0e0;">${compliance.act || '—'}</td>
+            <td style="padding: 10px; border: 1px solid #e0e0e0;">${compliance.act || "—"}</td>
           </tr>
           <tr>
             <td style="padding: 10px; color: #666; border: 1px solid #e0e0e0;">Due Date</td>
@@ -49,7 +55,7 @@ const getEmailHTML = (compliance, type, assignedName) => {
           </tr>
           <tr style="background: #f8f9fa;">
             <td style="padding: 10px; color: #666; border: 1px solid #e0e0e0;">Submission Authority</td>
-            <td style="padding: 10px; border: 1px solid #e0e0e0;">${compliance.submissionAuthority || '—'}</td>
+            <td style="padding: 10px; border: 1px solid #e0e0e0;">${compliance.submissionAuthority || "—"}</td>
           </tr>
           <tr>
             <td style="padding: 10px; color: #666; border: 1px solid #e0e0e0;">Status</td>
@@ -74,38 +80,40 @@ const getEmailHTML = (compliance, type, assignedName) => {
 };
 
 const isSameDay = (d1, d2) => {
-  return d1.getFullYear() === d2.getFullYear() &&
+  return (
+    d1.getFullYear() === d2.getFullYear() &&
     d1.getMonth() === d2.getMonth() &&
-    d1.getDate() === d2.getDate();
+    d1.getDate() === d2.getDate()
+  );
 };
 
 const runAlertJob = async () => {
-  console.log('Running alert job:', new Date().toISOString());
+  console.log("Running alert job:", new Date().toISOString());
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayEnd = new Date(today);
     todayEnd.setHours(23, 59, 59, 999);
 
-    const admins = await User.find({ role: 'admin' }).select('email name');
-    const adminEmail = admins.map(a => a.email).join(',');
+    const admins = await User.find({ role: "admin" }).select("email name");
+    const adminEmail = admins.map((a) => a.email).join(",");
 
     const compliances = await Compliance.find({
-      status: { $ne: 'Completed' },
-      type: { $in: ['recurring', 'event'] }
-    }).populate('signingAuthority', 'email name');
+      status: { $ne: "Completed" },
+      type: { $in: ["recurring", "event"] },
+    }).populate("signingAuthority", "email name");
 
     let sentCount = 0;
 
     for (const compliance of compliances) {
       const alreadyAlerted = await AlertLog.findOne({
         complianceId: compliance.complianceId,
-        sentAt: { $gte: today, $lte: todayEnd }
+        sentAt: { $gte: today, $lte: todayEnd },
       });
       if (alreadyAlerted) continue;
 
       const assignedEmail = compliance.signingAuthority?.email || adminEmail;
-      const assignedName = compliance.signingAuthority?.name || 'Admin';
+      const assignedName = compliance.signingAuthority?.name || "Admin";
 
       const dueDate = new Date(compliance.dueDate);
       const alertDate = new Date(compliance.alertDate);
@@ -114,33 +122,45 @@ const runAlertJob = async () => {
 
       let type = null;
       if (isValidDue && today > dueDate && !isSameDay(today, dueDate)) {
-        type = 'overdue';
+        type = "overdue";
       } else if (isValidDue && isSameDay(today, dueDate)) {
-        type = 'due';
-      } else if (isValidAlert && isSameDay(today, alertDate)) {
-        type = 'reminder';
+        type = "due";
+      } else if (isValidAlert && today >= alertDate) {
+        const daysSinceAlert = Math.floor(
+          (today - alertDate) / (1000 * 60 * 60 * 24),
+        );
+        if (daysSinceAlert === 0 || daysSinceAlert % 3 === 0) {
+          type = "reminder";
+        }
       }
 
       if (!type) continue;
 
       const subject =
-        type === 'overdue' ? `🔴 OVERDUE: ${compliance.complianceId} — ${compliance.title}` :
-        type === 'due' ? `📅 DUE TODAY: ${compliance.complianceId} — ${compliance.title}` :
-        `🔔 REMINDER:  ${compliance.title}`;
+        type === "overdue"
+          ? `🔴 OVERDUE: ${compliance.complianceId} — ${compliance.title}`
+          : type === "due"
+            ? `📅 DUE TODAY: ${compliance.complianceId} — ${compliance.title}`
+            : `🔔 REMINDER:  ${compliance.title}`;
 
       try {
         await transporter.sendMail({
           from: `"CompliTrack JPL Mines" <${process.env.EMAIL_USER}>`,
           to: assignedEmail,
+          cc: [process.env.MINES_AGENT_EMAIL, process.env.MINES_MANAGER_EMAIL]
+            .filter(Boolean)
+            .join(","),
           subject,
-          html: getEmailHTML(compliance, type, assignedName)
+          html: getEmailHTML(compliance, type, assignedName),
         });
-        console.log(`Email sent to ${assignedEmail}: ${subject}`);
+        console.log(
+          `Email sent to ${assignedEmail}, CC: Mines Agent & Manager: ${subject}`,
+        );
         await AlertLog.create({
           complianceId: compliance.complianceId,
           complianceTitle: compliance.title,
           sentTo: assignedEmail,
-          type: type === 'due' ? 'escalation' : type
+          type: type === "due" ? "escalation" : type,
         });
         sentCount++;
       } catch (emailErr) {
@@ -150,13 +170,13 @@ const runAlertJob = async () => {
 
     console.log(`Alert job done — Emails sent: ${sentCount}`);
   } catch (err) {
-    console.error('Alert job error:', err.message);
+    console.error("Alert job error:", err.message);
   }
 };
 
 // Runs every day at 4:45 PM IST
-cron.schedule('52 16 * * *', runAlertJob, {
-  timezone: 'Asia/Kolkata'
+cron.schedule("52 16 * * *", runAlertJob, {
+  timezone: "Asia/Kolkata",
 });
-runAlertJob()
+runAlertJob();
 module.exports = { runAlertJob };
