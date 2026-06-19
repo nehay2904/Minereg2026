@@ -95,6 +95,12 @@ const runAlertJob = async () => {
     const todayEnd = new Date(today);
     todayEnd.setHours(23, 59, 59, 999);
 
+    const toDateOnly = (d) => {
+      const dt = new Date(d);
+      return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+    };
+    const todayStr = toDateOnly(today);
+
     const admins = await User.find({ role: "admin" }).select("email name");
     const adminEmail = admins.map((a) => a.email).join(",");
 
@@ -112,22 +118,37 @@ const runAlertJob = async () => {
       });
       if (alreadyAlerted) continue;
 
+      console.log(
+        "Checking compliance:",
+        compliance.complianceId,
+        "| signingAuthority:",
+        compliance.signingAuthority,
+        "| status:",
+        compliance.status,
+      );
+
       const assignedEmail = compliance.signingAuthority?.email || adminEmail;
       const assignedName = compliance.signingAuthority?.name || "Admin";
 
-      const dueDate = new Date(compliance.dueDate);
-      const alertDate = new Date(compliance.alertDate);
-      const isValidDue = !isNaN(dueDate.getTime());
-      const isValidAlert = !isNaN(alertDate.getTime());
+      const dueDateStr = compliance.dueDate
+        ? toDateOnly(compliance.dueDate)
+        : null;
+      const alertDateStr = compliance.alertDate
+        ? toDateOnly(compliance.alertDate)
+        : null;
+      const isValidDue =
+        dueDateStr && !isNaN(new Date(compliance.dueDate).getTime());
+      const isValidAlert =
+        alertDateStr && !isNaN(new Date(compliance.alertDate).getTime());
 
       let type = null;
-      if (isValidDue && today > dueDate && !isSameDay(today, dueDate)) {
+      if (isValidDue && todayStr > dueDateStr) {
         type = "overdue";
-      } else if (isValidDue && isSameDay(today, dueDate)) {
+      } else if (isValidDue && todayStr === dueDateStr) {
         type = "due";
-      } else if (isValidAlert && today >= alertDate) {
+      } else if (isValidAlert && todayStr >= alertDateStr) {
         const daysSinceAlert = Math.floor(
-          (today - alertDate) / (1000 * 60 * 60 * 24),
+          (new Date(todayStr) - new Date(alertDateStr)) / (1000 * 60 * 60 * 24),
         );
         if (daysSinceAlert === 0 || daysSinceAlert % 3 === 0) {
           type = "reminder";
@@ -141,7 +162,7 @@ const runAlertJob = async () => {
           ? `🔴 OVERDUE: ${compliance.complianceId} — ${compliance.title}`
           : type === "due"
             ? `📅 DUE TODAY: ${compliance.complianceId} — ${compliance.title}`
-            : `🔔 REMINDER:  ${compliance.title}`;
+            : `🔔 REMINDER: ${compliance.complianceId} — ${compliance.title}`;
 
       try {
         await transporter.sendMail({
@@ -174,9 +195,10 @@ const runAlertJob = async () => {
   }
 };
 
-// Runs every day at 4:45 PM IST
-cron.schedule("00 10 * * *", runAlertJob, {
+// Runs every day at 10:48 AM IST
+cron.schedule("04 11 * * *", runAlertJob, {
   timezone: "Asia/Kolkata",
 });
+
 runAlertJob();
 module.exports = { runAlertJob };
