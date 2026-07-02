@@ -7,7 +7,7 @@ const complianceSchema = new mongoose.Schema({
   title: { type: String, required: true },
   detail: { type: String },
   recurrence: { type: String },
-  signingAuthority: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  signingAuthority: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
   submissionAuthority: { type: String },
   dueDate: { type: String },
   alertDate: { type: String },

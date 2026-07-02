@@ -7,7 +7,7 @@ const { protect, adminOnly } = require('../middleware/auth');
 router.get('/', protect, async (req, res) => {
   try {
     const filter = {};
-    if (req.user.role !== 'admin') filter.signingAuthority = req.user._id;
+    if (req.user.role !== 'admin') filter.signingAuthority = { $in: [req.user._id] };
     if (req.query.status) filter.status = req.query.status;
     if (req.query.type) filter.type = req.query.type;
     const compliances = await Compliance.find(filter)
@@ -77,13 +77,13 @@ router.patch('/:id/status', protect, async (req, res) => {
   }
 });
 
-// PATCH assign user
+// PATCH assign user(s)
 router.patch('/:id/assign', protect, adminOnly, async (req, res) => {
   try {
-    const { userId } = req.body;
+    const { userIds } = req.body; // expects an array of user IDs
     const compliance = await Compliance.findByIdAndUpdate(
       req.params.id,
-      { signingAuthority: userId || null },
+      { signingAuthority: Array.isArray(userIds) ? userIds : [] },
       { new: true }
     ).populate('signingAuthority', 'name email dept');
     res.json(compliance);

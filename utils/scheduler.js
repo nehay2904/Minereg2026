@@ -54,6 +54,10 @@ const getEmailHTML = (compliance, type, assignedName) => {
             <td style="padding: 10px; border: 1px solid #e0e0e0;">${compliance.submissionAuthority || "—"}</td>
           </tr>
           <tr>
+            <td style="padding: 10px; color: #666; border: 1px solid #e0e0e0;">Format</td>
+            <td style="padding: 10px; border: 1px solid #e0e0e0;">${compliance.driveLink ? `<a href="${compliance.driveLink}" style="color: #1a73e8;">View Document</a>` : "—"}</td>
+          </tr>
+          <tr style="background: #f8f9fa;">
             <td style="padding: 10px; color: #666; border: 1px solid #e0e0e0;">Status</td>
             <td style="padding: 10px; border: 1px solid #e0e0e0;">${compliance.status}</td>
           </tr>
@@ -127,8 +131,15 @@ const runAlertJob = async () => {
         compliance.status,
       );
 
-      const assignedEmail = compliance.signingAuthority?.email || adminEmail;
-      const assignedName = compliance.signingAuthority?.name || "Admin";
+      const assignedAuthorities = Array.isArray(compliance.signingAuthority)
+        ? compliance.signingAuthority
+        : [];
+      const assignedEmail = assignedAuthorities.length
+        ? assignedAuthorities.map((u) => u.email).filter(Boolean).join(",")
+        : adminEmail;
+      const assignedName = assignedAuthorities.length
+        ? assignedAuthorities.map((u) => u.name).filter(Boolean).join(", ")
+        : "Admin";
 
       const dueDateStr = compliance.dueDate
         ? toDateOnly(compliance.dueDate)
