@@ -12,7 +12,8 @@ const complianceSchema = new mongoose.Schema({
   dueDate: { type: String },
   alertDate: { type: String },
   status: { type: String, enum: ['Pending', 'Completed'], default: 'Pending' },
-  completedDate: { type: Date, default: null }
+  completedDate: { type: Date, default: null },
+  driveLink: { type: String, default: null }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Compliance', complianceSchema);

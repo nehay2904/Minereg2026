@@ -75,31 +75,27 @@ const getEmailHTML = (compliance, type, assignedName) => {
   `;
 };
 
-// Safely reduce a Date object or "YYYY-MM-DD" string to a plain YYYY-MM-DD string.
-// Never uses local-timezone getters, so server TZ can't silently shift the calendar day.
-const toDateOnly = (d) => {
-  if (typeof d === "string") return d.slice(0, 10); // already "2026-07-10..."
-  const dt = new Date(d);
-  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
-};
-
-// "Today" as seen in IST, regardless of what timezone the server itself runs in
-const getTodayISTStr = () =>
-  new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }); // en-CA = YYYY-MM-DD
-
-// Exact whole-day difference between two YYYY-MM-DD strings
-const daysBetween = (fromStr, toStr) => {
-  const d1 = new Date(fromStr + "T00:00:00Z");
-  const d2 = new Date(toStr + "T00:00:00Z");
-  return Math.round((d2 - d1) / 86400000);
+const isSameDay = (d1, d2) => {
+  return (
+    d1.getFullYear() === d2.getFullYear() &&
+    d1.getMonth() === d2.getMonth() &&
+    d1.getDate() === d2.getDate()
+  );
 };
 
 const runAlertJob = async () => {
   console.log("Running alert job:", new Date().toISOString());
   try {
-    const todayStr = getTodayISTStr();
-    const todayStart = new Date(todayStr + "T00:00:00+05:30");
-    const todayEnd = new Date(todayStr + "T23:59:59+05:30");
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(today);
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const toDateOnly = (d) => {
+      const dt = new Date(d);
+      return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+    };
+    const todayStr = toDateOnly(today);
 
     const admins = await User.find({ role: "admin" }).select("email name");
     const adminEmail = admins.map((a) => a.email).join(",");
@@ -114,7 +110,7 @@ const runAlertJob = async () => {
     for (const compliance of compliances) {
       const alreadyAlerted = await AlertLog.findOne({
         complianceId: compliance.complianceId,
-        sentAt: { $gte: todayStart, $lte: todayEnd },
+        sentAt: { $gte: today, $lte: todayEnd },
       });
       if (alreadyAlerted) continue;
 
@@ -137,20 +133,21 @@ const runAlertJob = async () => {
         ? toDateOnly(compliance.alertDate)
         : null;
       const isValidDue =
-        dueDateStr && !isNaN(new Date(dueDateStr).getTime());
+        dueDateStr && !isNaN(new Date(compliance.dueDate).getTime());
       const isValidAlert =
-        alertDateStr && !isNaN(new Date(alertDateStr).getTime());
+        alertDateStr && !isNaN(new Date(compliance.alertDate).getTime());
 
       let type = null;
-
       if (isValidDue && todayStr > dueDateStr) {
         type = "overdue";
       } else if (isValidDue && todayStr === dueDateStr) {
         type = "due";
       } else if (isValidAlert && todayStr >= alertDateStr) {
-        const daysSinceAlert = daysBetween(alertDateStr, todayStr);
-        if (daysSinceAlert % 3 === 0) {
-          type = "reminder"; // fires on alertDate itself, then every 3rd day (3, 6, 9...)
+        const daysSinceAlert = Math.floor(
+          (new Date(todayStr) - new Date(alertDateStr)) / (1000 * 60 * 60 * 24),
+        );
+        if (daysSinceAlert === 0 || daysSinceAlert % 3 === 0) {
+          type = "reminder";
         }
       }
 
@@ -158,10 +155,10 @@ const runAlertJob = async () => {
 
       const subject =
         type === "overdue"
-          ? `🔴 OVERDUE:  ${compliance.title}`
+          ? `🔴 OVERDUE: ${compliance.complianceId} — ${compliance.title}`
           : type === "due"
-            ? `📅 DUE TODAY:  ${compliance.title}`
-            : `🔔 REMINDER:   ${compliance.title}`;
+            ? `📅 DUE TODAY: ${compliance.complianceId} — ${compliance.title}`
+            : `🔔 REMINDER: ${compliance.complianceId} — ${compliance.title}`;
 
       try {
         await transporter.sendMail({
@@ -194,9 +191,10 @@ const runAlertJob = async () => {
   }
 };
 
-// Runs every day at 11:04 AM IST
-cron.schedule("00 11 * * *", runAlertJob, {
+// Runs every day at 10:48 AM IST
+cron.schedule("04 11 * * *", runAlertJob, {
   timezone: "Asia/Kolkata",
 });
 
+runAlertJob();
 module.exports = { runAlertJob };
