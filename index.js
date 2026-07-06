@@ -14,7 +14,7 @@ app.use('/api/compliances', require('./routes/compliance'));
 app.use('/api/users', require('./routes/user'));
 app.use('/api/alertlogs', require('./routes/alertLog'));
 app.use('/api/recordassignments', require('./routes/recordAssignment'));
-app.use("/api/safety-meetings", require("./routes/safetyMeetings"));
+app.use("/api/safety-meetings", require("./routes/SafetyMeetings"));
 
 app.get('/', (req, res) => res.send('CompliTrack API running'));
 
