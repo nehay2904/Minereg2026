@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 dotenv.config();
+app.use("/api/safety-meetings", require("./routes/safetyMeetings"));
 
 const app = express();
 app.use(cors());
