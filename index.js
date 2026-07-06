@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 dotenv.config();
-app.use("/api/safety-meetings", require("./routes/safetyMeetings"));
 
 const app = express();
 app.use(cors());
@@ -15,6 +14,7 @@ app.use('/api/compliances', require('./routes/compliance'));
 app.use('/api/users', require('./routes/user'));
 app.use('/api/alertlogs', require('./routes/alertLog'));
 app.use('/api/recordassignments', require('./routes/recordAssignment'));
+app.use("/api/safety-meetings", require("./routes/safetyMeetings"));
 
 app.get('/', (req, res) => res.send('CompliTrack API running'));
 
