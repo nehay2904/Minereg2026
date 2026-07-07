@@ -4,7 +4,7 @@ const SafetyMeeting = require("../models/SafetyMeeting");
 const { protect, adminOnly } = require("../middleware/auth");
 
 // GET /api/safety-meetings — admin only (SCM page, full data)
-router.get("/", protect, adminOnly, async (req, res) => {
+router.get("/", protect, async (req, res) => {
   try {
     const meetings = await SafetyMeeting.find()
       .sort({ meetingDate: -1 })
