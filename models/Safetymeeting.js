@@ -12,7 +12,11 @@ const observationSchema = new mongoose.Schema(
       enum: ["High", "Medium", "Low"],
       default: "Medium",
     },
-    assignedTo: { type: String, required: true },
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     raisedBy: { type: String },
     targetDate: { type: Date },
     status: { type: String, enum: ["Pending", "Closed"], default: "Pending" },
