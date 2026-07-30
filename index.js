@@ -15,7 +15,7 @@ app.use('/api/users', require('./routes/user'));
 app.use('/api/alertlogs', require('./routes/alertLog'));
 app.use('/api/recordassignments', require('./routes/recordAssignment'));
 app.use("/api/safety-meetings", require("./routes/SafetyMeetings"));
-
+require("./utils/safetyMinutesReminder");
 app.get('/', (req, res) => res.send('CompliTrack API running'));
 
 mongoose.connect(process.env.MONGO_URI)
