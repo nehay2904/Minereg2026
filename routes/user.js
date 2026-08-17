@@ -11,7 +11,6 @@ router.get('/', protect, adminOnly, async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
-// 
 router.delete('/:id', protect, adminOnly, async (req, res) => {
   try {
     await User.findByIdAndDelete(req.params.id);
